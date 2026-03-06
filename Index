@@ -1,0 +1,355 @@
+<!DOCTYPE html><html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Turtle – Save the Ocean</title>
+<style>
+:root{
+--line:rgba(255,255,255,.12);
+--accent:#63ffe2;
+}
+body{margin:0;font-family:Arial;background:#04131f;color:white}
+.wrap{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+.sidebar{background:#061b2d;padding:14px;border-right:1px solid var(--line);overflow:auto}
+.main{padding:14px}
+canvas{width:100%;max-width:1200px;aspect-ratio:16/9;border-radius:14px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.5);touch-action:none}
+button{background:#153f63;color:white;border:none;border-radius:8px;padding:8px 10px;margin:3px;font-weight:700;cursor:pointer}
+button.active{outline:2px solid var(--accent)}
+.palette{display:flex;flex-wrap:wrap}
+textarea{width:100%;height:180px;background:#081a29;color:#dff4ff;border:none;border-radius:8px;padding:10px;font-family:Consolas}
+</style>
+</head>
+<body><div class="wrap"><aside class="sidebar">
+<h2>🐢 Turtle – Save the Ocean</h2><p><b>Biome rendszer:</b> a pálya különböző részei más hangulatúak.</p><p>1️⃣ Coral reef<br>
+2️⃣ Plastic pollution zone<br>
+3️⃣ Deep ocean cave<br>
+4️⃣ Turtle rescue</p><div class="palette" id="palette"></div><button id="editorBtn">Editor</button> <button id="eraseBtn">Erase</button> <button id="exportBtn">Export</button> <button id="importBtn">Import</button>
+
+<textarea id="jsonBox"></textarea></aside><main class="main">
+<canvas id="game" width="1200" height="650"></canvas>
+</main></div><script>
+
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
+
+let camX=0
+let worldWidth=6000
+
+let objects=[]
+
+let editor=false
+let erase=false
+
+const palette=["plastic","coral","crab","net","rock","baby"]
+let selected="plastic"
+
+const paletteDiv=document.getElementById("palette")
+
+palette.forEach(p=>{
+let b=document.createElement("button")
+b.innerText=p
+b.dataset.type=p
+b.onclick=()=>{selected=p;refresh()}
+paletteDiv.appendChild(b)
+})
+
+function refresh(){
+[...paletteDiv.children].forEach(b=>b.classList.toggle("active",b.dataset.type===selected))
+}
+
+refresh()
+
+const player={
+x:120,
+y:300,
+targetX:120,
+targetY:300
+}
+
+
+/* ---------------- BIOME BACKGROUNDS ---------------- */
+
+function drawBiomeBackground(){
+
+let biome=Math.floor((player.x)/1500)
+
+if(biome===0){drawReef()}
+if(biome===1){drawPlasticZone()}
+if(biome===2){drawDeepOcean()}
+if(biome>=3){drawRescueZone()}
+
+}
+
+
+function drawReef(){
+let g=ctx.createLinearGradient(0,0,0,650)
+g.addColorStop(0,"#6ed6ff")
+g.addColorStop(.4,"#2ca7d4")
+g.addColorStop(1,"#0a4b73")
+ctx.fillStyle=g
+ctx.fillRect(0,0,1200,650)
+
+drawLightRays()
+
+drawCoralReef()
+}
+
+function drawPlasticZone(){
+let g=ctx.createLinearGradient(0,0,0,650)
+g.addColorStop(0,"#5cc1ff")
+g.addColorStop(.5,"#1b7fab")
+g.addColorStop(1,"#083b5c")
+ctx.fillStyle=g
+ctx.fillRect(0,0,1200,650)
+
+drawLightRays()
+
+drawTrashParticles()
+}
+
+function drawDeepOcean(){
+let g=ctx.createLinearGradient(0,0,0,650)
+g.addColorStop(0,"#245c82")
+g.addColorStop(.4,"#0b2a46")
+g.addColorStop(1,"#02131f")
+ctx.fillStyle=g
+ctx.fillRect(0,0,1200,650)
+
+drawFog()
+}
+
+function drawRescueZone(){
+let g=ctx.createLinearGradient(0,0,0,650)
+g.addColorStop(0,"#6ad7ff")
+g.addColorStop(.5,"#1a9bb8")
+g.addColorStop(1,"#073a5a")
+ctx.fillStyle=g
+ctx.fillRect(0,0,1200,650)
+
+drawLightRays()
+
+ctx.fillStyle="rgba(255,255,255,0.1)"
+ctx.font="48px Arial"
+ctx.fillText("RESCUE ZONE",400,120)
+}
+
+
+function drawLightRays(){
+for(let i=0;i<7;i++){
+ctx.fillStyle="rgba(255,255,255,0.06)"
+ctx.beginPath()
+ctx.moveTo(i*220-camX*0.2,0)
+ctx.lineTo(i*220+80-camX*0.2,0)
+ctx.lineTo(i*220+240-camX*0.2,650)
+ctx.lineTo(i*220+100-camX*0.2,650)
+ctx.fill()
+}
+}
+
+function drawCoralReef(){
+for(let i=0;i<15;i++){
+let x=(i*260-camX*0.5)%1400
+ctx.strokeStyle="#ff8aa1"
+ctx.lineWidth=5
+ctx.beginPath()
+ctx.moveTo(x,520)
+ctx.lineTo(x-10,480)
+ctx.moveTo(x,520)
+ctx.lineTo(x+10,470)
+ctx.stroke()
+}
+}
+
+function drawTrashParticles(){
+for(let i=0;i<40;i++){
+ctx.fillStyle="rgba(255,255,255,0.2)"
+ctx.fillRect(Math.random()*1200,Math.random()*650,3,3)
+}
+}
+
+function drawFog(){
+ctx.fillStyle="rgba(0,0,0,0.45)"
+ctx.fillRect(0,0,1200,650)
+}
+
+
+/* ---------------- PLAYER ---------------- */
+
+function drawTurtle(x,y){
+ctx.save()
+ctx.translate(x,y)
+
+ctx.fillStyle="#3ed8b2"
+ctx.beginPath()
+ctx.ellipse(0,0,24,16,0,0,Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle="#2a7a6a"
+ctx.beginPath()
+ctx.moveTo(-10,-2)
+ctx.lineTo(0,-12)
+ctx.lineTo(10,-2)
+ctx.lineTo(0,8)
+ctx.fill()
+
+ctx.fillStyle="#a6fff1"
+ctx.beginPath()
+ctx.arc(20,-2,7,0,Math.PI*2)
+ctx.fill()
+
+ctx.restore()
+}
+
+
+/* ---------------- OBJECTS ---------------- */
+
+function drawObject(o){
+let x=o.x-camX
+let y=o.y
+
+if(o.type==="plastic"){
+ctx.fillStyle="#d7ecff"
+ctx.fillRect(x-7,y-15,14,30)
+}
+
+if(o.type==="coral"){
+ctx.strokeStyle="#ff88a8"
+ctx.lineWidth=6
+ctx.beginPath()
+ctx.moveTo(x,y)
+ctx.lineTo(x-12,y-25)
+ctx.moveTo(x,y)
+ctx.lineTo(x+12,y-20)
+ctx.stroke()
+}
+
+if(o.type==="crab"){
+ctx.fillStyle="#ff6b5a"
+ctx.beginPath()
+ctx.ellipse(x,y,18,12,0,0,Math.PI*2)
+ctx.fill()
+}
+
+if(o.type==="net"){
+ctx.strokeStyle="#e3e3e3"
+ctx.strokeRect(x-22,y-28,44,56)
+}
+
+if(o.type==="rock"){
+ctx.fillStyle="#7b8b95"
+ctx.beginPath()
+ctx.moveTo(x-25,y+10)
+ctx.lineTo(x-10,y-10)
+ctx.lineTo(x+15,y-10)
+ctx.lineTo(x+25,y+10)
+ctx.closePath()
+ctx.fill()
+}
+
+if(o.type==="baby"){
+drawTurtle(x,y)
+ctx.strokeStyle="white"
+ctx.beginPath()
+ctx.arc(x,y,26,0,Math.PI*2)
+ctx.stroke()
+}
+
+}
+
+
+/* ---------------- GAME LOOP ---------------- */
+
+function updatePlayer(){
+player.x+= (player.targetX-player.x)*0.08
+player.y+= (player.targetY-player.y)*0.08
+
+camX=player.x-400
+if(camX<0)camX=0
+if(camX>worldWidth-1200)camX=worldWidth-1200
+}
+
+function render(){
+ctx.clearRect(0,0,1200,650)
+
+drawBiomeBackground()
+
+objects.forEach(drawObject)
+
+drawTurtle(player.x-camX,player.y)
+
+requestAnimationFrame(render)
+}
+
+setInterval(updatePlayer,16)
+render()
+
+
+/* ---------------- TOUCH CONTROL ---------------- */
+
+let dragging=false
+
+canvas.addEventListener("pointerdown",e=>{
+
+let r=canvas.getBoundingClientRect()
+let x=(e.clientX-r.left)+camX
+let y=(e.clientY-r.top)
+
+// always allow drag on touch devices
+player.targetX=x
+player.targetY=y
+
+dragging=true
+
+// prevent page scroll on mobile
+if(e.cancelable) e.preventDefault()
+
+if(editor){
+
+if(erase){
+objects=objects.filter(o=>Math.hypot(o.x-x,o.y-y)>40)
+}else{
+objects.push({type:selected,x,y})
+}
+
+}
+
+})
+}
+}
+
+})
+
+canvas.addEventListener("pointermove",e=>{
+if(!dragging)return
+let r=canvas.getBoundingClientRect()
+player.targetX=(e.clientX-r.left)+camX
+player.targetY=(e.clientY-r.top)
+})
+
+canvas.addEventListener("pointerup",()=>dragging=false)
+
+
+/* ---------------- EDITOR ---------------- */
+
+const editorBtn=document.getElementById("editorBtn")
+const eraseBtn=document.getElementById("eraseBtn")
+
+editorBtn.onclick=()=>editor=!editor
+
+eraseBtn.onclick=()=>erase=!erase
+
+
+document.getElementById("exportBtn").onclick=()=>{
+jsonBox.value=JSON.stringify({objects},null,2)
+}
+
+
+document.getElementById("importBtn").onclick=()=>{
+try{
+let data=JSON.parse(jsonBox.value)
+objects=data.objects||[]
+}catch(e){alert("JSON error")}
+}
+
+</script></body>
+</html>
