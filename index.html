@@ -96,12 +96,22 @@ r:2+Math.random()*4
 
 let camX=0
 
-canvas.addEventListener("pointermove",e=>{
+function setTarget(e){
+  const rect = canvas.getBoundingClientRect()
+  turtle.targetX = (e.clientX - rect.left) + camX
+  turtle.targetY = (e.clientY - rect.top)
+}
 
-turtle.targetX=e.clientX+camX
-turtle.targetY=e.clientY
-
-})
+canvas.addEventListener("pointerdown", setTarget)
+canvas.addEventListener("pointermove", setTarget)
+canvas.addEventListener("touchstart", (e)=>{
+  const t = e.touches[0]
+  setTarget({clientX:t.clientX, clientY:t.clientY})
+}, {passive:true})
+canvas.addEventListener("touchmove", (e)=>{
+  const t = e.touches[0]
+  setTarget({clientX:t.clientX, clientY:t.clientY})
+}, {passive:true})
 
 function update(){
 
