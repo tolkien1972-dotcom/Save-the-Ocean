@@ -3,28 +3,34 @@
 <head>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Turtle – Save the Ocean</title>
+<title>Turtle Level Editor</title>
 
 <style>
 
 body{
 margin:0;
-overflow:hidden;
-background:#001e2f;
+background:#0b2a3a;
 font-family:Arial;
+overflow:hidden;
+}
+
+#toolbar{
+position:fixed;
+top:10px;
+left:10px;
+background:rgba(0,0,0,0.6);
+padding:10px;
+border-radius:10px;
+color:white;
+}
+
+button{
+margin:3px;
+padding:6px 10px;
 }
 
 canvas{
 display:block;
-}
-
-#ui{
-position:absolute;
-top:10px;
-left:10px;
-color:white;
-font-size:20px;
 }
 
 </style>
@@ -33,7 +39,21 @@ font-size:20px;
 
 <body>
 
-<div id="ui">Score: <span id="score">0</span></div>
+<div id="toolbar">
+
+Tool:
+
+<button onclick="tool='platform'">Platform</button>
+<button onclick="tool='trash'">Trash</button>
+<button onclick="tool='crab'">Crab</button>
+<button onclick="tool='goal'">Baby Turtle</button>
+
+<br><br>
+
+<button onclick="exportLevel()">Export JSON</button>
+<button onclick="clearLevel()">Clear</button>
+
+</div>
 
 <canvas id="game"></canvas>
 
@@ -50,188 +70,92 @@ canvas.height=window.innerHeight
 window.addEventListener("resize",resize)
 resize()
 
-let score=0
-let scoreUI=document.getElementById("score")
+let tool="platform"
 
-let turtle={
-x:200,
-y:200,
-targetX:200,
-targetY:200,
-speed:0.05
-}
-
+let platforms=[]
 let trash=[]
-let fish=[]
-let bubbles=[]
+let enemies=[]
+let goal=null
 
-for(let i=0;i<10;i++){
+canvas.addEventListener("pointerdown",e=>{
 
-trash.push({
-x:Math.random()*2000,
-y:Math.random()*canvas.height
-})
+let x=e.clientX
+let y=e.clientY
 
+if(tool==="platform"){
+platforms.push({x:x,y:y,w:120,h:20})
 }
 
-for(let i=0;i<8;i++){
-
-fish.push({
-x:Math.random()*canvas.width,
-y:Math.random()*canvas.height,
-speed:1+Math.random()*2
-})
-
+if(tool==="trash"){
+trash.push({x:x,y:y})
 }
 
-for(let i=0;i<40;i++){
-
-bubbles.push({
-x:Math.random()*canvas.width,
-y:Math.random()*canvas.height,
-r:2+Math.random()*4
-})
-
+if(tool==="crab"){
+enemies.push({type:"crab",x:x,y:y})
 }
 
-let camX=0
-
-function setTarget(e){
-  const rect = canvas.getBoundingClientRect()
-  turtle.targetX = (e.clientX - rect.left) + camX
-  turtle.targetY = (e.clientY - rect.top)
-}
-
-canvas.addEventListener("pointerdown", setTarget)
-canvas.addEventListener("pointermove", setTarget)
-canvas.addEventListener("touchstart", (e)=>{
-  const t = e.touches[0]
-  setTarget({clientX:t.clientX, clientY:t.clientY})
-}, {passive:true})
-canvas.addEventListener("touchmove", (e)=>{
-  const t = e.touches[0]
-  setTarget({clientX:t.clientX, clientY:t.clientY})
-}, {passive:true})
-
-function update(){
-
-turtle.x+=(turtle.targetX-turtle.x)*turtle.speed
-turtle.y+=(turtle.targetY-turtle.y)*turtle.speed
-
-camX=turtle.x-canvas.width/2
-
-trash.forEach((t,i)=>{
-
-if(Math.hypot(t.x-turtle.x,t.y-turtle.y)<40){
-
-trash.splice(i,1)
-
-score++
-
-scoreUI.innerText=score
-
+if(tool==="goal"){
+goal={x:x,y:y}
 }
 
 })
 
-fish.forEach(f=>{
+function draw(){
 
-f.x-=f.speed
-
-if(f.x<-50)f.x=canvas.width+Math.random()*300
-
-})
-
-bubbles.forEach(b=>{
-
-b.y-=0.5
-
-if(b.y<0){
-b.y=canvas.height
-b.x=Math.random()*canvas.width
-}
-
-})
-
-}
-
-function drawOcean(){
-
-let g=ctx.createLinearGradient(0,0,0,canvas.height)
-
-g.addColorStop(0,"#0077b6")
-g.addColorStop(1,"#001e2f")
-
-ctx.fillStyle=g
+ctx.fillStyle="#0a3b55"
 ctx.fillRect(0,0,canvas.width,canvas.height)
 
-}
-
-function drawBubbles(){
-
-ctx.fillStyle="rgba(255,255,255,0.4)"
-
-bubbles.forEach(b=>{
-
-ctx.beginPath()
-ctx.arc(b.x,b.y,b.r,0,Math.PI*2)
-ctx.fill()
-
+platforms.forEach(p=>{
+ctx.fillStyle="#a86f3e"
+ctx.fillRect(p.x,p.y,p.w,p.h)
 })
-
-}
-
-function drawFish(){
-
-ctx.fillStyle="orange"
-
-fish.forEach(f=>{
-
-ctx.beginPath()
-ctx.ellipse(f.x,f.y,15,8,0,0,Math.PI*2)
-ctx.fill()
-
-})
-
-}
-
-function drawTrash(){
-
-ctx.fillStyle="#ccc"
 
 trash.forEach(t=>{
-
-ctx.fillRect(t.x-camX,t.y,20,20)
-
+ctx.fillStyle="#ddd"
+ctx.fillRect(t.x-10,t.y-10,20,20)
 })
 
-}
-
-function drawTurtle(){
-
-ctx.fillStyle="lime"
-
+enemies.forEach(e=>{
+ctx.fillStyle="red"
 ctx.beginPath()
-ctx.arc(turtle.x-camX,turtle.y,20,0,Math.PI*2)
+ctx.arc(e.x,e.y,15,0,Math.PI*2)
 ctx.fill()
+})
+
+if(goal){
+ctx.fillStyle="lime"
+ctx.beginPath()
+ctx.arc(goal.x,goal.y,20,0,Math.PI*2)
+ctx.fill()
+}
+
+requestAnimationFrame(draw)
 
 }
 
-function gameLoop(){
+draw()
 
-update()
+function exportLevel(){
 
-drawOcean()
-drawBubbles()
-drawFish()
-drawTrash()
-drawTurtle()
+let level={
+platforms:platforms,
+trash:trash,
+enemies:enemies,
+goal:goal
+}
 
-requestAnimationFrame(gameLoop)
+alert(JSON.stringify(level,null,2))
 
 }
 
-gameLoop()
+function clearLevel(){
+
+platforms=[]
+trash=[]
+enemies=[]
+goal=null
+
+}
 
 </script>
 
