@@ -1,474 +1,172 @@
 <!DOCTYPE html><html lang="hu">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Turtle – Save the Ocean</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Turtle – Save the Ocean V4</title>
 <style>
-:root{
-  --bg:#04131f;
-  --panel:#061b2d;
-  --panel2:#153f63;
-  --line:rgba(255,255,255,.12);
-  --text:#ecf8ff;
-  --accent:#63ffe2;
-}
-*{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;overflow:hidden}
-.wrap{display:grid;grid-template-columns:320px 1fr;height:100vh;height:100dvh}
-.sidebar{background:linear-gradient(180deg,#061b2d,#08243a);padding:14px;border-right:1px solid var(--line);overflow:auto}
-.main{padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
-canvas{
-  width:100%;
-  height:calc(100vh - 90px);
-  height:calc(100dvh - 90px);
-  display:block;
-  border-radius:14px;
-  border:1px solid var(--line);
-  box-shadow:0 20px 60px rgba(0,0,0,.5);
-  touch-action:none;
-  background:#082b42;
-}
-button{background:var(--panel2);color:white;border:none;border-radius:10px;padding:9px 11px;margin:3px;font-weight:700;cursor:pointer}
-button.active{outline:2px solid var(--accent)}
-.palette,.toolbar,.stats{display:flex;flex-wrap:wrap;gap:6px}
-textarea{width:100%;height:160px;background:#081a29;color:#dff4ff;border:none;border-radius:8px;padding:10px;font-family:Consolas,monospace}
-.pill{background:rgba(255,255,255,.08);padding:7px 10px;border-radius:999px;font-size:13px}
-h1{margin:0 0 8px;font-size:23px}
-p,li{line-height:1.4;color:#d8efff}
-.card{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
-.small{font-size:13px;opacity:.9}
-@media (max-width:980px){
-  .wrap{grid-template-columns:1fr}
-  .sidebar{display:none}
-  .main{padding:8px}
-  canvas{height:calc(100vh - 56px);height:calc(100dvh - 56px);border-radius:10px}
-}
+html,body{margin:0;background:#021421;color:white;font-family:Arial;height:100%;overflow:hidden}
+#hud{position:absolute;top:10px;left:10px;z-index:10;display:flex;gap:10px}
+.pill{background:rgba(0,0,0,.35);padding:8px 12px;border-radius:20px;font-weight:bold}
+canvas{display:block}
 </style>
 </head>
-<body>
-<div class="wrap">
-  <aside class="sidebar">
-    <h1>🐢 Turtle – Save the Ocean</h1><div class="card">
-  <p><b>Tablet verzió – javított responsive canvas</b></p>
-  <p class="small">Most már Android tabletre optimalizált. Fekvő módban a vászon automatikusan a kijelző méretéhez igazodik.</p>
-  <ul>
-    <li>Érintsd meg a pályát</li>
-    <li>Húzd az ujjad</li>
-    <li>A teknős követi a célt</li>
-  </ul>
-</div>
+<body><div id="hud">
+<div class="pill" id="score">⭐ 0</div>
+<div class="pill" id="zone">🌊 Coral Garden</div>
+</div><canvas id="game"></canvas>
 
-<div class="card">
-  <p><b>Biome rendszer</b></p>
-  <p class="small">1. Coral reef → 2. Plastic zone → 3. Deep ocean → 4. Rescue zone</p>
-  <div class="palette" id="palette"></div>
-  <div class="toolbar" style="margin-top:8px">
-    <button id="editorBtn">Editor</button>
-    <button id="eraseBtn">Erase</button>
-    <button id="exportBtn">Export</button>
-    <button id="importBtn">Import</button>
-    <button id="resetBtn">Reset</button>
-  </div>
-  <textarea id="jsonBox"></textarea>
-</div>
+<script>
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
 
-  </aside>  <main class="main">
-    <div class="stats">
-      <div class="pill" id="scoreView">⭐ 0</div>
-      <div class="pill" id="lifeView">❤️ 3</div>
-      <div class="pill" id="zoneView">🌊 Reef</div>
-      <div class="pill" id="msgView">Érintsd meg a pályát és húzd a teknőst.</div>
-    </div>
-    <canvas id="game"></canvas>
-  </main>
-</div><script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const scoreView = document.getElementById('scoreView');
-const lifeView = document.getElementById('lifeView');
-const zoneView = document.getElementById('zoneView');
-const msgView = document.getElementById('msgView');
-const jsonBox = document.getElementById('jsonBox');
-
-let W = 1200;
-let H = 650;
-function resizeCanvas(){
-  const rect = canvas.getBoundingClientRect();
-  const dpr = Math.max(1, window.devicePixelRatio || 1);
-  canvas.width = Math.round(rect.width * dpr);
-  canvas.height = Math.round(rect.height * dpr);
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  W = rect.width;
-  H = rect.height;
+function resize(){
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
 }
-window.addEventListener('resize', resizeCanvas);
-window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 120));
+resize()
+window.onresize=resize
 
-let camX = 0;
-let worldWidth = 6000;
-let editor = false;
-let erase = false;
-let dragging = false;
-let score = 0;
-let life = 3;
-let selected = 'plastic';
-let pointerId = null;
+let worldWidth=5000
+let cameraX=0
 
-const player = {
-  x: 120,
-  y: 300,
-  targetX: 120,
-  targetY: 300,
-  r: 22,
-  tail: []
-};
+const player={x:200,y:400,targetX:200,targetY:400}
 
-const palette = ['plastic','coral','crab','net','rock','baby'];
-const paletteDiv = document.getElementById('palette');
-palette.forEach(p => {
-  const b = document.createElement('button');
-  b.textContent = p;
-  b.dataset.type = p;
-  b.onclick = () => { selected = p; refreshPalette(); };
-  paletteDiv.appendChild(b);
-});
-function refreshPalette(){
-  [...paletteDiv.children].forEach(b => b.classList.toggle('active', b.dataset.type === selected));
-  document.getElementById('editorBtn').classList.toggle('active', editor);
-  document.getElementById('eraseBtn').classList.toggle('active', erase);
+let score=0
+
+const trash=[]
+for(let i=0;i<20;i++){
+trash.push({x:400+i*200,y:350+Math.random()*150})
 }
 
-const defaultObjects = [
-  {type:'plastic',x:380,y:250},{type:'coral',x:650,y:430},{type:'plastic',x:860,y:320},
-  {type:'rock',x:1180,y:520},{type:'coral',x:1360,y:420},{type:'plastic',x:1580,y:210},
-  {type:'crab',x:1880,y:520},{type:'net',x:2100,y:330},{type:'plastic',x:2320,y:260},
-  {type:'rock',x:2560,y:520},{type:'crab',x:2800,y:520},{type:'net',x:3040,y:300},
-  {type:'plastic',x:3320,y:220},{type:'rock',x:3560,y:520},{type:'crab',x:3800,y:520},
-  {type:'net',x:4050,y:350},{type:'rock',x:4300,y:520},{type:'plastic',x:4600,y:230},
-  {type:'coral',x:4860,y:430},{type:'net',x:5160,y:290},{type:'baby',x:5640,y:360}
-];
-let objects = JSON.parse(JSON.stringify(defaultObjects));
+const platforms=[
+{x:0,y:500,w:500,h:80},
+{x:600,y:420,w:300,h:50},
+{x:1000,y:520,w:400,h:60},
+{x:1600,y:430,w:300,h:50},
+{x:2200,y:350,w:250,h:50},
+{x:2600,y:500,w:300,h:60},
+{x:3200,y:450,w:300,h:50},
+{x:3800,y:380,w:250,h:50},
+{x:4200,y:520,w:350,h:60}
+]
 
-const bubbles = Array.from({length:42}, () => ({
-  x: Math.random() * worldWidth,
-  y: 120 + Math.random() * 420,
-  r: 1.5 + Math.random() * 4,
-  s: 0.3 + Math.random() * 1.2,
-  d: -0.4 + Math.random() * 0.8
-}));
+const goal={x:4700,y:320}
 
-function updateUI(){
-  scoreView.textContent = `⭐ ${score}`;
-  lifeView.textContent = `❤️ ${life}`;
-  const biome = Math.floor(player.x / 1500);
-  zoneView.textContent = biome === 0 ? '🌊 Reef' : biome === 1 ? '🧴 Plastic zone' : biome === 2 ? '🌑 Deep ocean' : '🐢 Rescue zone';
+const bubbles=[]
+for(let i=0;i<60;i++){
+bubbles.push({x:Math.random()*worldWidth,y:Math.random()*700,s:1+Math.random()*2})
 }
 
-function resetGame(){
-  camX = 0;
-  score = 0;
-  life = 3;
-  player.x = 120;
-  player.y = 300;
-  player.targetX = 120;
-  player.targetY = 300;
-  player.tail = [];
-  objects = JSON.parse(JSON.stringify(defaultObjects));
-  exportJSON();
-  updateUI();
+function gradient(){
+let g=ctx.createLinearGradient(0,0,0,canvas.height)
+g.addColorStop(0,"#6bd3ff")
+g.addColorStop(.5,"#0f6fa4")
+g.addColorStop(1,"#021421")
+ctx.fillStyle=g
+ctx.fillRect(0,0,canvas.width,canvas.height)
 }
 
-function exportJSON(){
-  jsonBox.value = JSON.stringify({objects}, null, 2);
+function drawParallax(){
+for(let i=0;i<5;i++){
+let x=(i*900-cameraX*0.2)%900
+ctx.fillStyle="rgba(255,255,255,.08)"
+ctx.beginPath()
+ctx.moveTo(x,0)
+ctx.lineTo(x+150,0)
+ctx.lineTo(x+350,canvas.height)
+ctx.lineTo(x+200,canvas.height)
+ctx.fill()
 }
-
-function importJSON(){
-  try {
-    const data = JSON.parse(jsonBox.value);
-    objects = data.objects || [];
-  } catch(e){
-    alert('JSON hiba');
-  }
-}
-
-function drawLightRays(){
-  for(let i=0;i<7;i++){
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    ctx.beginPath();
-    ctx.moveTo(i*220-camX*0.2,0);
-    ctx.lineTo(i*220+80-camX*0.2,0);
-    ctx.lineTo(i*220+240-camX*0.2,H);
-    ctx.lineTo(i*220+100-camX*0.2,H);
-    ctx.fill();
-  }
-}
-
-function drawBiomeBackground(){
-  const biome = Math.floor(player.x / 1500);
-  let g = ctx.createLinearGradient(0,0,0,H);
-  if (biome === 0) {
-    g.addColorStop(0,'#73dbff'); g.addColorStop(.45,'#1f9fd0'); g.addColorStop(1,'#083d60');
-  } else if (biome === 1) {
-    g.addColorStop(0,'#58c0ea'); g.addColorStop(.5,'#156988'); g.addColorStop(1,'#072b42');
-  } else if (biome === 2) {
-    g.addColorStop(0,'#204b69'); g.addColorStop(.5,'#0a2338'); g.addColorStop(1,'#010e18');
-  } else {
-    g.addColorStop(0,'#67d7ff'); g.addColorStop(.5,'#168ba7'); g.addColorStop(1,'#063a58');
-  }
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,W,H);
-
-  drawLightRays();
-
-  if (biome === 0) drawCoralReef();
-  if (biome === 1) drawTrashParticles();
-  if (biome === 2) drawFog();
-  if (biome >= 3) drawRescueTitle();
-
-  drawFishSchools();
-  drawBubbles();
-
-  ctx.fillStyle = '#c7a168';
-  ctx.fillRect(0,H-75,W,75);
-  drawSeaweed();
-}
-
-function drawCoralReef(){
-  for(let i=0;i<16;i++){
-    const x = (i*250 - camX*0.55) % (W + 240) - 80;
-    ctx.strokeStyle = '#ff8ab0';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(x,H-95); ctx.lineTo(x-10,H-140);
-    ctx.moveTo(x,H-95); ctx.lineTo(x+10,H-148);
-    ctx.moveTo(x,H-95); ctx.lineTo(x+20,H-125);
-    ctx.stroke();
-  }
-}
-
-function drawTrashParticles(){
-  for(let i=0;i<34;i++){
-    ctx.fillStyle = 'rgba(255,255,255,.17)';
-    ctx.fillRect(((i*73)+performance.now()*0.02)%W, 90 + (i*19)% (H-180), 3, 3);
-  }
-}
-
-function drawFog(){
-  ctx.fillStyle = 'rgba(0,0,0,.38)';
-  ctx.fillRect(0,0,W,H);
-}
-
-function drawRescueTitle(){
-  ctx.fillStyle = 'rgba(255,255,255,.10)';
-  ctx.font = 'bold 42px Arial';
-  ctx.fillText('RESCUE ZONE', Math.max(30, W*0.35), 90);
-}
-
-function drawSeaweed(){
-  for(let i=0;i<18;i++){
-    const x = (i*190 - camX*0.65) % (W + 180) - 50;
-    ctx.strokeStyle = '#25cf86';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(x,H-75);
-    ctx.bezierCurveTo(x-10,H-110,x+18,H-145,x+3,H-182);
-    ctx.stroke();
-  }
 }
 
 function drawBubbles(){
-  bubbles.forEach(b => {
-    b.y -= b.s;
-    b.x += b.d;
-    if (b.y < 70) { b.y = H - 90; b.x = Math.random() * worldWidth; }
-    const sx = b.x - camX;
-    if (sx < -10 || sx > W + 10) return;
-    ctx.beginPath();
-    ctx.arc(sx, b.y, b.r, 0, Math.PI*2);
-    ctx.strokeStyle = 'rgba(255,255,255,.35)';
-    ctx.stroke();
-  });
+bubbles.forEach(b=>{
+b.y-=b.s
+if(b.y<0){b.y=canvas.height}
+let sx=b.x-cameraX
+ctx.beginPath()
+ctx.arc(sx,b.y,3,0,Math.PI*2)
+ctx.strokeStyle="rgba(255,255,255,.5)"
+ctx.stroke()
+})
 }
 
-function drawFishSchools(){
-  for(let i=0;i<10;i++){
-    const x = ((i*240) - camX*0.28 + performance.now()*0.03) % (W + 140) - 70;
-    const y = 120 + (i%4)*55;
-    drawFish(x,y,0.7 + (i%3)*0.12, i%2===0?1:-1);
-  }
+function drawPlatforms(){
+platforms.forEach(p=>{
+let x=p.x-cameraX
+ctx.fillStyle="#5a4a6a"
+ctx.fillRect(x,p.y,p.w,p.h)
+ctx.fillStyle="#71ffb0"
+ctx.fillRect(x,p.y-10,p.w,10)
+})
 }
 
-function drawFish(x,y,s=1,dir=1){
-  ctx.save();
-  ctx.translate(x,y);
-  ctx.scale(s*dir,s);
-  ctx.fillStyle = 'rgba(255,225,120,.75)';
-  ctx.beginPath();
-  ctx.ellipse(0,0,18,9,0,0,Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-18,0); ctx.lineTo(-30,-10); ctx.lineTo(-30,10); ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+function drawTrash(){
+trash.forEach((t,i)=>{
+let x=t.x-cameraX
+ctx.fillStyle="#e8f6ff"
+ctx.fillRect(x-6,t.y-12,12,24)
+if(Math.hypot(player.x-t.x,player.y-t.y)<40){
+trash.splice(i,1)
+score++
+document.getElementById("score").innerText="⭐ "+score
+}
+})
 }
 
-function drawTurtle(x,y,small=false){
-  ctx.save();
-  ctx.translate(x,y);
-  ctx.scale(small?0.72:1, small?0.72:1);
-  ctx.fillStyle = small ? '#97f7e1' : '#3ed8b2';
-  ctx.beginPath();
-  ctx.ellipse(0,0,24,16,0,0,Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = '#2a7a6a';
-  ctx.beginPath();
-  ctx.moveTo(-10,-2); ctx.lineTo(0,-12); ctx.lineTo(10,-2); ctx.lineTo(0,8); ctx.fill();
-  ctx.fillStyle = '#a6fff1';
-  ctx.beginPath();
-  ctx.arc(20,-2,7,0,Math.PI*2); ctx.fill();
-  [[-12,-10],[-12,10],[8,-10],[8,10]].forEach(([lx,ly])=>{
-    ctx.beginPath(); ctx.ellipse(lx,ly*0.5,7,4,0,0,Math.PI*2); ctx.fill();
-  });
-  ctx.restore();
+function drawGoal(){
+let x=goal.x-cameraX
+ctx.strokeStyle="white"
+ctx.strokeRect(x-25,goal.y-25,50,50)
+ctx.beginPath()
+ctx.arc(x,goal.y,10,0,Math.PI*2)
+ctx.fillStyle="#7cffd7"
+ctx.fill()
 }
 
-function drawObject(o){
-  const x = o.x - camX;
-  const y = o.y;
-  if (x < -80 || x > W + 80) return;
-
-  if (o.type === 'plastic') {
-    ctx.fillStyle = '#d7ecff'; ctx.fillRect(x-7,y-15,14,30);
-    ctx.fillStyle = '#91caff'; ctx.fillRect(x-5,y-8,10,9);
-  }
-  if (o.type === 'coral') {
-    ctx.strokeStyle = '#ff88a8'; ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(x,y); ctx.lineTo(x-12,y-25);
-    ctx.moveTo(x,y); ctx.lineTo(x+12,y-20);
-    ctx.stroke();
-  }
-  if (o.type === 'crab') {
-    ctx.fillStyle = '#ff6b5a';
-    ctx.beginPath(); ctx.ellipse(x,y,18,12,0,0,Math.PI*2); ctx.fill();
-  }
-  if (o.type === 'net') {
-    ctx.strokeStyle = '#e3e3e3'; ctx.strokeRect(x-22,y-28,44,56);
-  }
-  if (o.type === 'rock') {
-    ctx.fillStyle = '#7b8b95';
-    ctx.beginPath();
-    ctx.moveTo(x-25,y+10); ctx.lineTo(x-10,y-10); ctx.lineTo(x+15,y-10); ctx.lineTo(x+25,y+10); ctx.closePath(); ctx.fill();
-  }
-  if (o.type === 'baby') {
-    drawTurtle(x,y,true);
-    ctx.strokeStyle = 'white'; ctx.beginPath(); ctx.arc(x,y,26,0,Math.PI*2); ctx.stroke();
-  }
+function drawTurtle(){
+let x=player.x-cameraX
+let y=player.y
+ctx.fillStyle="#47e6b2"
+ctx.beginPath()
+ctx.ellipse(x,y,25,18,0,0,Math.PI*2)
+ctx.fill()
+ctx.fillStyle="#c8fff1"
+ctx.beginPath()
+ctx.arc(x+20,y-3,7,0,Math.PI*2)
+ctx.fill()
 }
 
-function dist(a,b,c,d){ return Math.hypot(a-c,b-d); }
-function updatePlayer(){
-  player.x += (player.targetX - player.x) * 0.10;
-  player.y += (player.targetY - player.y) * 0.10;
-  player.x = Math.max(40, Math.min(worldWidth - 40, player.x));
-  player.y = Math.max(70, Math.min(H - 95, player.y));
-  camX = player.x - W * 0.33;
-  camX = Math.max(0, Math.min(worldWidth - W, camX));
+function move(){
+player.x+=(player.targetX-player.x)*0.08
+player.y+=(player.targetY-player.y)*0.08
 
-  player.tail.push({x:player.x,y:player.y});
-  if (player.tail.length > 14) player.tail.shift();
-
-  for (let i = objects.length - 1; i >= 0; i--) {
-    const o = objects[i];
-    const r = o.type === 'baby' ? 34 : o.type === 'net' ? 34 : o.type === 'rock' ? 34 : 26;
-    if (dist(player.x, player.y, o.x, o.y) < r) {
-      if (o.type === 'plastic') { score += 10; objects.splice(i,1); msgView.textContent = 'Műanyag begyűjtve.'; }
-      else if (o.type === 'coral') { score += 25; objects.splice(i,1); msgView.textContent = 'Korall helyreállítva.'; }
-      else if (o.type === 'baby') { score += 200; objects.splice(i,1); msgView.textContent = 'Siker! Megmentetted a kis teknőst.'; }
-      else { life = Math.max(0, life - 1); msgView.textContent = 'Vigyázz! Sérülést kaptál.'; }
-      updateUI();
-    }
-  }
+cameraX=player.x-canvas.width*0.3
+if(cameraX<0)cameraX=0
+if(cameraX>worldWidth-canvas.width)cameraX=worldWidth-canvas.width
 }
 
-function render(){
-  drawBiomeBackground();
-  objects.forEach(drawObject);
-  player.tail.forEach((t,i)=>{
-    ctx.beginPath();
-    ctx.arc(t.x-camX, t.y, 2+i*0.08, 0, Math.PI*2);
-    ctx.fillStyle = `rgba(255,255,255,${i/player.tail.length*0.18})`;
-    ctx.fill();
-  });
-  drawTurtle(player.x - camX, player.y, false);
-  requestAnimationFrame(loop);
-}
+canvas.addEventListener("pointerdown",e=>{
+let rect=canvas.getBoundingClientRect()
+player.targetX=e.clientX+cameraX
+player.targetY=e.clientY
+})
 
 function loop(){
-  ctx.clearRect(0,0,W,H);
-  updatePlayer();
-  render();
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+gradient()
+drawParallax()
+drawBubbles()
+drawPlatforms()
+drawTrash()
+drawGoal()
+move()
+drawTurtle()
+
+requestAnimationFrame(loop)
 }
 
-function eventPos(e){
-  const r = canvas.getBoundingClientRect();
-  return {
-    x: (e.clientX - r.left),
-    y: (e.clientY - r.top),
-    wx: (e.clientX - r.left) + camX,
-    wy: (e.clientY - r.top)
-  };
-}
-
-canvas.addEventListener('pointerdown', e => {
-  const p = eventPos(e);
-  if (e.cancelable) e.preventDefault();
-  pointerId = e.pointerId;
-  dragging = true;
-  canvas.setPointerCapture(e.pointerId);
-  player.targetX = p.wx;
-  player.targetY = p.wy;
-
-  if (editor) {
-    if (erase) {
-      objects = objects.filter(o => dist(o.x,o.y,p.wx,p.wy) > 40);
-    } else {
-      objects.push({type:selected,x:p.wx,y:p.wy});
-    }
-    exportJSON();
-  }
-}, {passive:false});
-
-canvas.addEventListener('pointermove', e => {
-  if (!dragging || e.pointerId !== pointerId || editor) return;
-  const p = eventPos(e);
-  if (e.cancelable) e.preventDefault();
-  player.targetX = p.wx;
-  player.targetY = p.wy;
-}, {passive:false});
-
-function stopDrag(e){
-  if (e.pointerId === pointerId) {
-    dragging = false;
-    pointerId = null;
-  }
-}
-canvas.addEventListener('pointerup', stopDrag);
-canvas.addEventListener('pointercancel', stopDrag);
-
-window.addEventListener('keydown', e => {
-  if (e.key.toLowerCase() === 'r') resetGame();
-});
-
-document.getElementById('editorBtn').onclick = () => { editor = !editor; refreshPalette(); };
-document.getElementById('eraseBtn').onclick = () => { erase = !erase; refreshPalette(); };
-document.getElementById('exportBtn').onclick = exportJSON;
-document.getElementById('importBtn').onclick = importJSON;
-document.getElementById('resetBtn').onclick = resetGame;
-
-resizeCanvas();
-refreshPalette();
-resetGame();
-requestAnimationFrame(loop);
+loop()
 </script></body>
 </html>
