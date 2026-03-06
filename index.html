@@ -2,7 +2,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Turtle – Save the Ocean V4</title>
+<title>Turtle – Save the Ocean V5</title>
 <style>
 html,body{margin:0;background:#021421;color:white;font-family:Arial;height:100%;overflow:hidden}
 #hud{position:absolute;top:10px;left:10px;z-index:10;display:flex;gap:10px}
@@ -26,7 +26,7 @@ canvas.height=window.innerHeight
 resize()
 window.onresize=resize
 
-let worldWidth=5000
+let worldWidth=6000
 let cameraX=0
 
 const player={x:200,y:400,targetX:200,targetY:400}
@@ -34,47 +34,67 @@ const player={x:200,y:400,targetX:200,targetY:400}
 let score=0
 
 const trash=[]
-for(let i=0;i<20;i++){
-trash.push({x:400+i*200,y:350+Math.random()*150})
+for(let i=0;i<25;i++){
+trash.push({x:500+i*200,y:350+Math.random()*150})
 }
 
 const platforms=[
-{x:0,y:500,w:500,h:80},
-{x:600,y:420,w:300,h:50},
-{x:1000,y:520,w:400,h:60},
-{x:1600,y:430,w:300,h:50},
-{x:2200,y:350,w:250,h:50},
-{x:2600,y:500,w:300,h:60},
-{x:3200,y:450,w:300,h:50},
-{x:3800,y:380,w:250,h:50},
-{x:4200,y:520,w:350,h:60}
+{x:0,y:520,w:600,h:80},
+{x:700,y:420,w:300,h:60},
+{x:1200,y:520,w:420,h:70},
+{x:1800,y:430,w:320,h:60},
+{x:2400,y:350,w:260,h:60},
+{x:3000,y:500,w:350,h:70},
+{x:3600,y:450,w:300,h:60},
+{x:4200,y:380,w:260,h:60},
+{x:4700,y:520,w:380,h:80}
 ]
 
-const goal={x:4700,y:320}
+const goal={x:5500,y:320}
 
 const bubbles=[]
-for(let i=0;i<60;i++){
-bubbles.push({x:Math.random()*worldWidth,y:Math.random()*700,s:1+Math.random()*2})
+for(let i=0;i<80;i++){
+bubbles.push({x:Math.random()*worldWidth,y:Math.random()*900,s:1+Math.random()*3})
+}
+
+const fish=[]
+for(let i=0;i<12;i++){
+fish.push({x:Math.random()*worldWidth,y:100+Math.random()*300,s:0.5+Math.random()})
 }
 
 function gradient(){
 let g=ctx.createLinearGradient(0,0,0,canvas.height)
-g.addColorStop(0,"#6bd3ff")
-g.addColorStop(.5,"#0f6fa4")
+g.addColorStop(0,"#7ed7ff")
+g.addColorStop(.4,"#1593c9")
 g.addColorStop(1,"#021421")
 ctx.fillStyle=g
 ctx.fillRect(0,0,canvas.width,canvas.height)
 }
 
 function drawParallax(){
-for(let i=0;i<5;i++){
-let x=(i*900-cameraX*0.2)%900
-ctx.fillStyle="rgba(255,255,255,.08)"
+for(let i=0;i<8;i++){
+let x=(i*900-cameraX*0.15)%900
+ctx.fillStyle="rgba(255,255,255,.05)"
 ctx.beginPath()
 ctx.moveTo(x,0)
-ctx.lineTo(x+150,0)
-ctx.lineTo(x+350,canvas.height)
-ctx.lineTo(x+200,canvas.height)
+ctx.lineTo(x+200,0)
+ctx.lineTo(x+450,canvas.height)
+ctx.lineTo(x+250,canvas.height)
+ctx.fill()
+}
+}
+
+function drawCoralBackground(){
+for(let i=0;i<15;i++){
+let x=(i*400-cameraX*0.3)
+let y=canvas.height-120
+ctx.fillStyle="#ff7aa8"
+ctx.beginPath()
+ctx.arc(x,y,40,0,Math.PI*2)
+ctx.fill()
+ctx.fillStyle="#ffb0c8"
+ctx.beginPath()
+ctx.arc(x+30,y-20,20,0,Math.PI*2)
 ctx.fill()
 }
 }
@@ -91,13 +111,44 @@ ctx.stroke()
 })
 }
 
+function drawFish(){
+fish.forEach(f=>{
+f.x+=f.s
+if(f.x>worldWidth)f.x=0
+let x=f.x-cameraX
+let y=f.y
+ctx.fillStyle="#ffcc55"
+ctx.beginPath()
+ctx.ellipse(x,y,12,6,0,0,Math.PI*2)
+ctx.fill()
+ctx.beginPath()
+ctx.moveTo(x-12,y)
+ctx.lineTo(x-20,y-6)
+ctx.lineTo(x-20,y+6)
+ctx.fill()
+})
+}
+
 function drawPlatforms(){
 platforms.forEach(p=>{
 let x=p.x-cameraX
-ctx.fillStyle="#5a4a6a"
+
+let g=ctx.createLinearGradient(0,p.y,0,p.y+p.h)
+g.addColorStop(0,"#f7a57c")
+g.addColorStop(1,"#4c3f5a")
+ctx.fillStyle=g
 ctx.fillRect(x,p.y,p.w,p.h)
-ctx.fillStyle="#71ffb0"
-ctx.fillRect(x,p.y-10,p.w,10)
+
+ctx.fillStyle="#6bffb8"
+ctx.fillRect(x,p.y-12,p.w,12)
+
+for(let i=0;i<8;i++){
+ctx.fillStyle=["#ff8bb0","#ffd36a","#8afff1","#b48cff"][i%4]
+ctx.beginPath()
+ctx.arc(x+20+i*(p.w-40)/7,p.y-6,5,0,Math.PI*2)
+ctx.fill()
+}
+
 })
 }
 
@@ -105,7 +156,10 @@ function drawTrash(){
 trash.forEach((t,i)=>{
 let x=t.x-cameraX
 ctx.fillStyle="#e8f6ff"
-ctx.fillRect(x-6,t.y-12,12,24)
+ctx.fillRect(x-7,t.y-14,14,28)
+ctx.fillStyle="#a8d8ff"
+ctx.fillRect(x-6,t.y-4,12,10)
+
 if(Math.hypot(player.x-t.x,player.y-t.y)<40){
 trash.splice(i,1)
 score++
@@ -127,13 +181,32 @@ ctx.fill()
 function drawTurtle(){
 let x=player.x-cameraX
 let y=player.y
+
 ctx.fillStyle="#47e6b2"
 ctx.beginPath()
-ctx.ellipse(x,y,25,18,0,0,Math.PI*2)
+ctx.ellipse(x,y,28,20,0,0,Math.PI*2)
 ctx.fill()
+
+ctx.fillStyle="#2a7a6a"
+ctx.beginPath()
+ctx.moveTo(x-10,y)
+ctx.lineTo(x,y-14)
+ctx.lineTo(x+10,y)
+ctx.lineTo(x,y+10)
+ctx.fill()
+
 ctx.fillStyle="#c8fff1"
 ctx.beginPath()
-ctx.arc(x+20,y-3,7,0,Math.PI*2)
+ctx.arc(x+22,y-3,8,0,Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle="#47e6b2"
+ctx.beginPath()
+ctx.ellipse(x-12,y+10,8,4,0,0,Math.PI*2)
+ctx.fill()
+
+ctx.beginPath()
+ctx.ellipse(x+12,y+10,8,4,0,0,Math.PI*2)
 ctx.fill()
 }
 
@@ -141,7 +214,8 @@ function move(){
 player.x+=(player.targetX-player.x)*0.08
 player.y+=(player.targetY-player.y)*0.08
 
-cameraX=player.x-canvas.width*0.3
+cameraX=player.x-canvas.width*0.35
+
 if(cameraX<0)cameraX=0
 if(cameraX>worldWidth-canvas.width)cameraX=worldWidth-canvas.width
 }
@@ -157,10 +231,13 @@ ctx.clearRect(0,0,canvas.width,canvas.height)
 
 gradient()
 drawParallax()
+drawCoralBackground()
+drawFish()
 drawBubbles()
 drawPlatforms()
 drawTrash()
 drawGoal()
+
 move()
 drawTurtle()
 
