@@ -2,40 +2,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Turtle – Save the Ocean V8</title>
+<title>Turtle – Save the Ocean V12 Finale</title>
 <style>
 html,body{margin:0;background:#021421;color:white;font-family:Arial;height:100%;overflow:hidden}
 #hud{position:absolute;top:10px;left:10px;z-index:10;display:flex;gap:10px}
-.pill{background:rgba(0,0,0,.35);padding:8px 12px;border-radius:20px;font-weight:bold}
-#menu{
+.pill{background:rgba(0,0,0,.35);padding:8px 14px;border-radius:20px;font-weight:bold}
+#menu,#win{
 position:absolute;
 left:50%;
 top:50%;
 transform:translate(-50%,-50%);
-text-align:center;
+text-align:center
 }
-button{
-padding:12px 22px;
-font-size:18px;
-border:none;
-border-radius:10px;
-background:#38c7ff;
-color:#012;
-cursor:pointer
-}
+button{padding:14px 26px;font-size:18px;border:none;border-radius:10px;background:#38c7ff;color:#012;cursor:pointer}
 canvas{display:block}
 </style>
 </head>
 <body><div id="menu">
 <h1>🐢 Save the Ocean</h1>
-<p>Collect trash and rescue the baby turtle.</p>
-<button onclick="startGame()">Start Game</button>
+<p>The Final Reef Mission</p>
+<button onclick="startGame()">Start Adventure</button>
+</div><div id="win" style="display:none">
+<h1>🌊 Ocean Saved!</h1>
+<p>You rescued the baby turtle and cleaned the reef.</p>
+<button onclick="location.reload()">Play Again</button>
 </div><div id="hud" style="display:none">
 <div class="pill" id="score">⭐ 0</div>
-<div class="pill" id="zone">🌊 Coral Reef</div>
+<div class="pill">🐢 Reef Mission</div>
 </div><canvas id="game"></canvas>
 
 <script>
+
 const canvas=document.getElementById("game")
 const ctx=canvas.getContext("2d")
 
@@ -54,95 +51,116 @@ document.getElementById("hud").style.display="flex"
 running=true
 }
 
-let worldWidth=7000
+let worldWidth=12000
 let cameraX=0
 
-const player={
-x:200,
-y:400,
-targetX:200,
-targetY:400,
-frame:0
-}
+const player={x:200,y:420,targetX:200,targetY:420,frame:0}
 
 let score=0
 
+/* TRASH */
 const trash=[]
-for(let i=0;i<30;i++){
-trash.push({x:600+i*200,y:350+Math.random()*160})
+for(let i=0;i<35;i++){
+trash.push({x:900+i*300,y:300+Math.random()*260})
 }
 
-const platforms=[
-{x:0,y:540,w:700,h:80},
-{x:900,y:450,w:300,h:60},
-{x:1500,y:540,w:420,h:70},
-{x:2200,y:420,w:320,h:60},
-{x:2800,y:360,w:260,h:60},
-{x:3400,y:520,w:350,h:70},
-{x:4000,y:440,w:300,h:60},
-{x:4600,y:380,w:260,h:60},
-{x:5200,y:540,w:380,h:80},
-{x:5900,y:420,w:320,h:60}
-]
-
-const crabs=[
-{x:1400,y:400,dir:1},
-{x:3100,y:400,dir:-1},
-{x:4800,y:400,dir:1}
-]
-
-const goal={x:6600,y:330}
-
-const bubbles=[]
-for(let i=0;i<120;i++){
-bubbles.push({x:Math.random()*worldWidth,y:Math.random()*1000,s:1+Math.random()*3})
+/* PLATFORMS */
+const platforms=[]
+for(let i=0;i<20;i++){
+platforms.push({
+x:i*600,
+y:420+Math.sin(i)*120,
+w:400,
+h:80
+})
 }
+
+/* ENEMIES */
+const crabs=[]
+for(let i=0;i<6;i++){
+crabs.push({x:2000+i*1500,y:520,dir:1})
+}
+
+/* FINAL GOAL */
+const goal={x:11500,y:280}
+
+/* BACKGROUND LIFE */
 
 const fish=[]
-for(let i=0;i<25;i++){
-fish.push({x:Math.random()*worldWidth,y:80+Math.random()*300,s:0.5+Math.random()})
+for(let i=0;i<60;i++){
+fish.push({x:Math.random()*worldWidth,y:80+Math.random()*420,s:0.3+Math.random()})
+}
+
+const bubbles=[]
+for(let i=0;i<220;i++){
+bubbles.push({x:Math.random()*worldWidth,y:Math.random()*1500,s:1+Math.random()*3})
 }
 
 const corals=[]
-for(let i=0;i<40;i++){
+for(let i=0;i<120;i++){
 corals.push({x:Math.random()*worldWidth})
 }
 
+const reefs=[]
+for(let i=0;i<40;i++){
+reefs.push({x:Math.random()*worldWidth})
+}
+
+/* OCEAN */
+
 function gradient(){
 let g=ctx.createLinearGradient(0,0,0,canvas.height)
-g.addColorStop(0,"#8be0ff")
-g.addColorStop(.45,"#1593c9")
+g.addColorStop(0,"#9fe9ff")
+g.addColorStop(.35,"#2aa1d6")
+g.addColorStop(.7,"#0b4d73")
 g.addColorStop(1,"#021421")
 ctx.fillStyle=g
 ctx.fillRect(0,0,canvas.width,canvas.height)
 }
 
-function parallaxLight(){
-for(let i=0;i<10;i++){
-let x=(i*900-cameraX*0.12)%900
-ctx.fillStyle="rgba(255,255,255,.06)"
+function lightRays(){
+for(let i=0;i<12;i++){
+let x=(i*1200-cameraX*0.12)%1200
+ctx.fillStyle="rgba(255,255,255,.05)"
 ctx.beginPath()
 ctx.moveTo(x,0)
-ctx.lineTo(x+220,0)
-ctx.lineTo(x+520,canvas.height)
-ctx.lineTo(x+300,canvas.height)
+ctx.lineTo(x+260,0)
+ctx.lineTo(x+580,canvas.height)
+ctx.lineTo(x+320,canvas.height)
 ctx.fill()
 }
+}
+
+function drawReefs(){
+reefs.forEach(r=>{
+let x=r.x-cameraX*0.2
+let y=canvas.height-220
+
+ctx.fillStyle="#063a55"
+ctx.beginPath()
+ctx.arc(x,y,150,0,Math.PI*2)
+ctx.fill()
+})
 }
 
 function drawCorals(){
 corals.forEach(c=>{
-let x=c.x-cameraX*0.35
-let y=canvas.height-120
+let x=c.x-cameraX*0.4
+let y=canvas.height-110
 
 ctx.fillStyle="#ff7aa8"
 ctx.beginPath()
-ctx.arc(x,y,40,0,Math.PI*2)
+ctx.arc(x,y,26,0,Math.PI*2)
 ctx.fill()
 
-ctx.fillStyle="#ffb0c8"
+ctx.fillStyle="#ffa34a"
 ctx.beginPath()
-ctx.arc(x+30,y-20,20,0,Math.PI*2)
+ctx.arc(x+22,y-14,12,0,Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle="#ffb3d0"
+ctx.beginPath()
+ctx.arc(x-18,y-12,10,0,Math.PI*2)
 ctx.fill()
 })
 }
@@ -157,13 +175,13 @@ let y=f.y
 
 ctx.fillStyle="#ffd36a"
 ctx.beginPath()
-ctx.ellipse(x,y,12,6,0,0,Math.PI*2)
+ctx.ellipse(x,y,10,5,0,0,Math.PI*2)
 ctx.fill()
 
 ctx.beginPath()
-ctx.moveTo(x-12,y)
-ctx.lineTo(x-22,y-6)
-ctx.lineTo(x-22,y+6)
+ctx.moveTo(x-10,y)
+ctx.lineTo(x-18,y-5)
+ctx.lineTo(x-18,y+5)
 ctx.fill()
 })
 }
@@ -176,11 +194,13 @@ if(b.y<0)b.y=canvas.height
 let sx=b.x-cameraX
 
 ctx.beginPath()
-ctx.arc(sx,b.y,3,0,Math.PI*2)
+ctx.arc(sx,b.y,2,0,Math.PI*2)
 ctx.strokeStyle="rgba(255,255,255,.5)"
 ctx.stroke()
 })
 }
+
+/* PLATFORMS */
 
 function drawPlatforms(){
 platforms.forEach(p=>{
@@ -193,19 +213,21 @@ ctx.fillStyle=g
 ctx.fillRect(x,p.y,p.w,p.h)
 
 ctx.fillStyle="#6bffb8"
-ctx.fillRect(x,p.y-12,p.w,12)
+ctx.fillRect(x,p.y-10,p.w,10)
 })
 }
+
+/* TRASH */
 
 function drawTrash(){
 trash.forEach((t,i)=>{
 let x=t.x-cameraX
 
 ctx.fillStyle="#e8f6ff"
-ctx.fillRect(x-7,t.y-14,14,28)
+ctx.fillRect(x-6,t.y-12,12,24)
 
 ctx.fillStyle="#a8d8ff"
-ctx.fillRect(x-6,t.y-4,12,10)
+ctx.fillRect(x-5,t.y-4,10,8)
 
 if(Math.hypot(player.x-t.x,player.y-t.y)<40){
 trash.splice(i,1)
@@ -215,15 +237,17 @@ document.getElementById("score").innerText="⭐ "+score
 })
 }
 
+/* CRABS */
+
 function updateCrabs(){
 crabs.forEach(c=>{
 
-c.x += c.dir * 1
+c.x+=c.dir*1.2
 
-if(c.x % 300 < 2) c.dir *= -1
+if(c.x%320<2)c.dir*=-1
 
-if(Math.abs(player.x-c.x)<40 && Math.abs(player.y-c.y)<40){
-score = Math.max(0,score-1)
+if(Math.abs(player.x-c.x)<40&&Math.abs(player.y-c.y)<40){
+score=Math.max(0,score-2)
 document.getElementById("score").innerText="⭐ "+score
 }
 
@@ -238,34 +262,38 @@ ctx.fillStyle="#ff5a4a"
 ctx.beginPath()
 ctx.ellipse(x,c.y,20,14,0,0,Math.PI*2)
 ctx.fill()
-
 })
 }
+
+/* GOAL */
 
 function drawGoal(){
 let x=goal.x-cameraX
 
 ctx.strokeStyle="white"
-ctx.strokeRect(x-25,goal.y-25,50,50)
+ctx.strokeRect(x-26,goal.y-26,52,52)
 
 ctx.beginPath()
-ctx.arc(x,goal.y,12,0,Math.PI*2)
+ctx.arc(x,goal.y,14,0,Math.PI*2)
 ctx.fillStyle="#7cffd7"
 ctx.fill()
 
 if(Math.abs(player.x-goal.x)<40){
 running=false
-setTimeout(()=>alert("You saved the baby turtle!"),200)
+setTimeout(()=>{
+document.getElementById("win").style.display="block"
+},300)
 }
 }
+
+/* TURTLE */
 
 function drawTurtle(){
 let x=player.x-cameraX
 let y=player.y
 
-player.frame += 0.1
-
-let swim = Math.sin(player.frame)*4
+player.frame+=0.12
+let swim=Math.sin(player.frame)*3
 
 ctx.fillStyle="#47e6b2"
 ctx.beginPath()
@@ -274,9 +302,9 @@ ctx.fill()
 
 ctx.fillStyle="#2a7a6a"
 ctx.beginPath()
-ctx.moveTo(x-10,y)
+ctx.moveTo(x-8,y)
 ctx.lineTo(x,y-16+swim)
-ctx.lineTo(x+10,y)
+ctx.lineTo(x+8,y)
 ctx.lineTo(x,y+12)
 ctx.fill()
 
@@ -294,6 +322,8 @@ ctx.ellipse(x+14,y+12-swim,10,5,0,0,Math.PI*2)
 ctx.fill()
 }
 
+/* MOVE */
+
 function move(){
 player.x+=(player.targetX-player.x)*0.08
 player.y+=(player.targetY-player.y)*0.08
@@ -304,21 +334,29 @@ if(cameraX<0)cameraX=0
 if(cameraX>worldWidth-canvas.width)cameraX=worldWidth-canvas.width
 }
 
+/* TOUCH */
+
 canvas.addEventListener("pointerdown",e=>{
-player.targetX=e.clientX+cameraX
-player.targetY=e.clientY
+const rect=canvas.getBoundingClientRect()
+player.targetX=(e.clientX-rect.left)+cameraX
+player.targetY=(e.clientY-rect.top)
 })
 
+/* LOOP */
+
 function loop(){
+
 if(!running){requestAnimationFrame(loop);return}
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
 gradient()
-parallaxLight()
+lightRays()
+drawReefs()
 drawCorals()
 drawFish()
 drawBubbles()
+
 drawPlatforms()
 drawTrash()
 
@@ -334,429 +372,6 @@ requestAnimationFrame(loop)
 }
 
 loop()
-</script></body>
-</html>for(let i=0;i<25;i++){
-trash.push({x:500+i*200,y:350+Math.random()*150})
-}
 
-const platforms=[
-{x:0,y:520,w:600,h:80},
-{x:700,y:420,w:300,h:60},
-{x:1200,y:520,w:420,h:70},
-{x:1800,y:430,w:320,h:60},
-{x:2400,y:350,w:260,h:60},
-{x:3000,y:500,w:350,h:70},
-{x:3600,y:450,w:300,h:60},
-{x:4200,y:380,w:260,h:60},
-{x:4700,y:520,w:380,h:80}
-]
-
-const goal={x:5500,y:320}
-
-const bubbles=[]
-for(let i=0;i<80;i++){
-bubbles.push({x:Math.random()*worldWidth,y:Math.random()*900,s:1+Math.random()*3})
-}
-
-const fish=[]
-for(let i=0;i<12;i++){
-fish.push({x:Math.random()*worldWidth,y:100+Math.random()*300,s:0.5+Math.random()})
-}
-
-function gradient(){
-let g=ctx.createLinearGradient(0,0,0,canvas.height)
-g.addColorStop(0,"#7ed7ff")
-g.addColorStop(.4,"#1593c9")
-g.addColorStop(1,"#021421")
-ctx.fillStyle=g
-ctx.fillRect(0,0,canvas.width,canvas.height)
-}
-
-function drawParallax(){
-for(let i=0;i<8;i++){
-let x=(i*900-cameraX*0.15)%900
-ctx.fillStyle="rgba(255,255,255,.05)"
-ctx.beginPath()
-ctx.moveTo(x,0)
-ctx.lineTo(x+200,0)
-ctx.lineTo(x+450,canvas.height)
-ctx.lineTo(x+250,canvas.height)
-ctx.fill()
-}
-}
-
-function drawCoralBackground(){
-for(let i=0;i<15;i++){
-let x=(i*400-cameraX*0.3)
-let y=canvas.height-120
-ctx.fillStyle="#ff7aa8"
-ctx.beginPath()
-ctx.arc(x,y,40,0,Math.PI*2)
-ctx.fill()
-ctx.fillStyle="#ffb0c8"
-ctx.beginPath()
-ctx.arc(x+30,y-20,20,0,Math.PI*2)
-ctx.fill()
-}
-}
-
-function drawBubbles(){
-bubbles.forEach(b=>{
-b.y-=b.s
-if(b.y<0){b.y=canvas.height}
-let sx=b.x-cameraX
-ctx.beginPath()
-ctx.arc(sx,b.y,3,0,Math.PI*2)
-ctx.strokeStyle="rgba(255,255,255,.5)"
-ctx.stroke()
-})
-}
-
-function drawFish(){
-fish.forEach(f=>{
-f.x+=f.s
-if(f.x>worldWidth)f.x=0
-let x=f.x-cameraX
-let y=f.y
-ctx.fillStyle="#ffcc55"
-ctx.beginPath()
-ctx.ellipse(x,y,12,6,0,0,Math.PI*2)
-ctx.fill()
-ctx.beginPath()
-ctx.moveTo(x-12,y)
-ctx.lineTo(x-20,y-6)
-ctx.lineTo(x-20,y+6)
-ctx.fill()
-})
-}
-
-function drawPlatforms(){
-platforms.forEach(p=>{
-let x=p.x-cameraX
-
-let g=ctx.createLinearGradient(0,p.y,0,p.y+p.h)
-g.addColorStop(0,"#f7a57c")
-g.addColorStop(1,"#4c3f5a")
-ctx.fillStyle=g
-ctx.fillRect(x,p.y,p.w,p.h)
-
-ctx.fillStyle="#6bffb8"
-ctx.fillRect(x,p.y-12,p.w,12)
-
-for(let i=0;i<8;i++){
-ctx.fillStyle=["#ff8bb0","#ffd36a","#8afff1","#b48cff"][i%4]
-ctx.beginPath()
-ctx.arc(x+20+i*(p.w-40)/7,p.y-6,5,0,Math.PI*2)
-ctx.fill()
-}
-
-})
-}
-
-function drawTrash(){
-trash.forEach((t,i)=>{
-let x=t.x-cameraX
-ctx.fillStyle="#e8f6ff"
-ctx.fillRect(x-7,t.y-14,14,28)
-ctx.fillStyle="#a8d8ff"
-ctx.fillRect(x-6,t.y-4,12,10)
-
-if(Math.hypot(player.x-t.x,player.y-t.y)<40){
-trash.splice(i,1)
-score++
-document.getElementById("score").innerText="⭐ "+score
-}
-})
-}
-
-function drawGoal(){
-let x=goal.x-cameraX
-ctx.strokeStyle="white"
-ctx.strokeRect(x-25,goal.y-25,50,50)
-ctx.beginPath()
-ctx.arc(x,goal.y,10,0,Math.PI*2)
-ctx.fillStyle="#7cffd7"
-ctx.fill()
-}
-
-function drawTurtle(){
-let x=player.x-cameraX
-let y=player.y
-
-ctx.fillStyle="#47e6b2"
-ctx.beginPath()
-ctx.ellipse(x,y,28,20,0,0,Math.PI*2)
-ctx.fill()
-
-ctx.fillStyle="#2a7a6a"
-ctx.beginPath()
-ctx.moveTo(x-10,y)
-ctx.lineTo(x,y-14)
-ctx.lineTo(x+10,y)
-ctx.lineTo(x,y+10)
-ctx.fill()
-
-ctx.fillStyle="#c8fff1"
-ctx.beginPath()
-ctx.arc(x+22,y-3,8,0,Math.PI*2)
-ctx.fill()
-
-ctx.fillStyle="#47e6b2"
-ctx.beginPath()
-ctx.ellipse(x-12,y+10,8,4,0,0,Math.PI*2)
-ctx.fill()
-
-ctx.beginPath()
-ctx.ellipse(x+12,y+10,8,4,0,0,Math.PI*2)
-ctx.fill()
-}
-
-function move(){
-player.x+=(player.targetX-player.x)*0.08
-player.y+=(player.targetY-player.y)*0.08
-
-cameraX=player.x-canvas.width*0.35
-
-if(cameraX<0)cameraX=0
-if(cameraX>worldWidth-canvas.width)cameraX=worldWidth-canvas.width
-}
-
-canvas.addEventListener("pointerdown",e=>{
-let rect=canvas.getBoundingClientRect()
-player.targetX=e.clientX+cameraX
-player.targetY=e.clientY
-})
-
-function loop(){
-ctx.clearRect(0,0,canvas.width,canvas.height)
-
-gradient()
-drawParallax()
-drawCoralBackground()
-drawFish()
-drawBubbles()
-drawPlatforms()
-drawTrash()
-drawGoal()
-
-move()
-drawTurtle()
-
-requestAnimationFrame(loop)
-}
-
-loop()
-</script></body>
-</html>for(let i=0;i<25;i++){
-trash.push({x:500+i*200,y:350+Math.random()*150})
-}
-
-const platforms=[
-{x:0,y:520,w:600,h:80},
-{x:700,y:420,w:300,h:60},
-{x:1200,y:520,w:420,h:70},
-{x:1800,y:430,w:320,h:60},
-{x:2400,y:350,w:260,h:60},
-{x:3000,y:500,w:350,h:70},
-{x:3600,y:450,w:300,h:60},
-{x:4200,y:380,w:260,h:60},
-{x:4700,y:520,w:380,h:80}
-]
-
-const goal={x:5500,y:320}
-
-const bubbles=[]
-for(let i=0;i<80;i++){
-bubbles.push({x:Math.random()*worldWidth,y:Math.random()*900,s:1+Math.random()*3})
-}
-
-const fish=[]
-for(let i=0;i<12;i++){
-fish.push({x:Math.random()*worldWidth,y:100+Math.random()*300,s:0.5+Math.random()})
-}
-
-function gradient(){
-let g=ctx.createLinearGradient(0,0,0,canvas.height)
-g.addColorStop(0,"#7ed7ff")
-g.addColorStop(.4,"#1593c9")
-g.addColorStop(1,"#021421")
-ctx.fillStyle=g
-ctx.fillRect(0,0,canvas.width,canvas.height)
-}
-
-function drawParallax(){
-for(let i=0;i<8;i++){
-let x=(i*900-cameraX*0.15)%900
-ctx.fillStyle="rgba(255,255,255,.05)"
-ctx.beginPath()
-ctx.moveTo(x,0)
-ctx.lineTo(x+200,0)
-ctx.lineTo(x+450,canvas.height)
-ctx.lineTo(x+250,canvas.height)
-ctx.fill()
-}
-}
-
-function drawCoralBackground(){
-for(let i=0;i<15;i++){
-let x=(i*400-cameraX*0.3)
-let y=canvas.height-120
-ctx.fillStyle="#ff7aa8"
-ctx.beginPath()
-ctx.arc(x,y,40,0,Math.PI*2)
-ctx.fill()
-ctx.fillStyle="#ffb0c8"
-ctx.beginPath()
-ctx.arc(x+30,y-20,20,0,Math.PI*2)
-ctx.fill()
-}
-}
-
-function drawBubbles(){
-bubbles.forEach(b=>{
-b.y-=b.s
-if(b.y<0){b.y=canvas.height}
-let sx=b.x-cameraX
-ctx.beginPath()
-ctx.arc(sx,b.y,3,0,Math.PI*2)
-ctx.strokeStyle="rgba(255,255,255,.5)"
-ctx.stroke()
-})
-}
-
-function drawFish(){
-fish.forEach(f=>{
-f.x+=f.s
-if(f.x>worldWidth)f.x=0
-let x=f.x-cameraX
-let y=f.y
-ctx.fillStyle="#ffcc55"
-ctx.beginPath()
-ctx.ellipse(x,y,12,6,0,0,Math.PI*2)
-ctx.fill()
-ctx.beginPath()
-ctx.moveTo(x-12,y)
-ctx.lineTo(x-20,y-6)
-ctx.lineTo(x-20,y+6)
-ctx.fill()
-})
-}
-
-function drawPlatforms(){
-platforms.forEach(p=>{
-let x=p.x-cameraX
-
-let g=ctx.createLinearGradient(0,p.y,0,p.y+p.h)
-g.addColorStop(0,"#f7a57c")
-g.addColorStop(1,"#4c3f5a")
-ctx.fillStyle=g
-ctx.fillRect(x,p.y,p.w,p.h)
-
-ctx.fillStyle="#6bffb8"
-ctx.fillRect(x,p.y-12,p.w,12)
-
-for(let i=0;i<8;i++){
-ctx.fillStyle=["#ff8bb0","#ffd36a","#8afff1","#b48cff"][i%4]
-ctx.beginPath()
-ctx.arc(x+20+i*(p.w-40)/7,p.y-6,5,0,Math.PI*2)
-ctx.fill()
-}
-
-})
-}
-
-function drawTrash(){
-trash.forEach((t,i)=>{
-let x=t.x-cameraX
-ctx.fillStyle="#e8f6ff"
-ctx.fillRect(x-7,t.y-14,14,28)
-ctx.fillStyle="#a8d8ff"
-ctx.fillRect(x-6,t.y-4,12,10)
-
-if(Math.hypot(player.x-t.x,player.y-t.y)<40){
-trash.splice(i,1)
-score++
-document.getElementById("score").innerText="⭐ "+score
-}
-})
-}
-
-function drawGoal(){
-let x=goal.x-cameraX
-ctx.strokeStyle="white"
-ctx.strokeRect(x-25,goal.y-25,50,50)
-ctx.beginPath()
-ctx.arc(x,goal.y,10,0,Math.PI*2)
-ctx.fillStyle="#7cffd7"
-ctx.fill()
-}
-
-function drawTurtle(){
-let x=player.x-cameraX
-let y=player.y
-
-ctx.fillStyle="#47e6b2"
-ctx.beginPath()
-ctx.ellipse(x,y,28,20,0,0,Math.PI*2)
-ctx.fill()
-
-ctx.fillStyle="#2a7a6a"
-ctx.beginPath()
-ctx.moveTo(x-10,y)
-ctx.lineTo(x,y-14)
-ctx.lineTo(x+10,y)
-ctx.lineTo(x,y+10)
-ctx.fill()
-
-ctx.fillStyle="#c8fff1"
-ctx.beginPath()
-ctx.arc(x+22,y-3,8,0,Math.PI*2)
-ctx.fill()
-
-ctx.fillStyle="#47e6b2"
-ctx.beginPath()
-ctx.ellipse(x-12,y+10,8,4,0,0,Math.PI*2)
-ctx.fill()
-
-ctx.beginPath()
-ctx.ellipse(x+12,y+10,8,4,0,0,Math.PI*2)
-ctx.fill()
-}
-
-function move(){
-player.x+=(player.targetX-player.x)*0.08
-player.y+=(player.targetY-player.y)*0.08
-
-cameraX=player.x-canvas.width*0.35
-
-if(cameraX<0)cameraX=0
-if(cameraX>worldWidth-canvas.width)cameraX=worldWidth-canvas.width
-}
-
-canvas.addEventListener("pointerdown",e=>{
-let rect=canvas.getBoundingClientRect()
-player.targetX=e.clientX+cameraX
-player.targetY=e.clientY
-})
-
-function loop(){
-ctx.clearRect(0,0,canvas.width,canvas.height)
-
-gradient()
-drawParallax()
-drawCoralBackground()
-drawFish()
-drawBubbles()
-drawPlatforms()
-drawTrash()
-drawGoal()
-
-move()
-drawTurtle()
-
-requestAnimationFrame(loop)
-}
-
-loop()
 </script></body>
 </html>
