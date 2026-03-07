@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Save the Ocean V14</title>
+<style>
+html,body{margin:0;background:#021421;color:white;font-family:Arial;height:100%;overflow:hidden}
+#menu{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+button{padding:14px 26px;border:none;border-radius:10px;background:#38c7ff;color:#012;font-size:18px}
+canvas{display:block}
+</style>
+</head>
+<body>
+
+<div id="menu">
+<h1>🐢 Save the Ocean</h1>
+<p>Real Graphics Engine</p>
+<button onclick="startGame()">Start</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+
+const sprite=new Image()
+sprite.src="ocean_pack_v14.png"
+
+let running=false
+
+function startGame(){
+document.getElementById("menu").style.display="none"
+running=true
+}
+
+let player={x:200,y:400,targetX:200,targetY:400}
+let cameraX=0
+
+canvas.addEventListener("pointerdown",e=>{
+player.targetX=e.clientX+cameraX
+player.targetY=e.clientY
+})
+
+function loop(){
+
+if(!running){requestAnimationFrame(loop);return}
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+ctx.drawImage(sprite,40,40,940,320,0,0,canvas.width,canvas.height)
+
+player.x+=(player.targetX-player.x)*0.08
+player.y+=(player.targetY-player.y)*0.08
+
+cameraX=player.x-canvas.width*0.35
+
+ctx.drawImage(sprite,1040,40,118,96,player.x-cameraX,player.y,80,60)
+
+requestAnimationFrame(loop)
+}
+
+sprite.onload=()=>loop()
+
+</script>
+</body>
+</html>
